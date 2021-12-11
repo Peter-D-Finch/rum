@@ -1,4 +1,5 @@
 # rum
+```text
 Peter Finch
 Professor Noah Daniel’s
 CSC 411: RUM Design Document
@@ -125,3 +126,4 @@ values) will represent the 32-bit word at index 2n (within the memory segment) a
 least significant 32 bytes of data represent the 32-bit word at index 2n + 1.
 ● If the number of 32-bit words in a segment is odd, the last word in the instruction will
 always be an instruction word for the halt operation
+```
