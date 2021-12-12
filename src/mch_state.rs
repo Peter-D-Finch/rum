@@ -3,6 +3,7 @@ use bitpack::bitpack::getu;
 use bitpack::bitpack::newu;
 use std::io::stdin;
 use std::io::Read;
+use std::io::Write;
 
 struct MchState {
 	regs: [u32; 8],
@@ -57,17 +58,17 @@ impl SegOperations for Segment {
         let word: u32;
         let pckd_word = self.words[(idx / 2) as usize];
         match idx%2 {
-            0 => word = getu(pckd_word, 32, 31) as u32,
-            1 => word = getu(pckd_word, 32, 63) as u32,
-            _ => word = 0
+            0 => word = (getu(pckd_word, 32, 0) << 32) as u32,
+            1 => word = getu(pckd_word, 32, 31) as u32,
+            _ => word = 5
         }
         return word;
     }
     fn set_word(&mut self, idx: u64, value: u32) {
         let pckd_word = self.words[(idx / 2) as usize];
         match idx%2 {
-            0 => self.words[(idx / 2) as usize] = newu(pckd_word, 32, 31, value as u64).unwrap(),
-            1 => self.words[(idx / 2) as usize] = newu(pckd_word, 32, 63, value as u64).unwrap(),
+            0 => self.words[(idx / 2) as usize] = newu(pckd_word, 32, 0, value as u64).unwrap(),
+            1 => self.words[(idx / 2) as usize] = newu(pckd_word, 32, 31, value as u64).unwrap(),
             _ => println!("Something is VERY wrong")
         }
     }
@@ -76,19 +77,30 @@ impl SegOperations for Segment {
         if words.len()%2 == 0 {
             for i in 0..words.len()/2 {
                 let mut temp_word: u64 = 0;
-                temp_word = newu(temp_word, 32, 31, words[i * 2] as u64).unwrap();
-                temp_word = newu(temp_word, 32, 63, words[(i * 2) + 1] as u64).unwrap();
+                temp_word = newu(temp_word, 32, 0, words[i * 2] as u64).unwrap();
+                for i in 0..temp_word.to_be_bytes().len() {
+                    print!("{:08b} ", temp_word.to_be_bytes()[i]);
+                }
+                print!("\n");
+                temp_word = newu(temp_word, 32, 31, words[(i * 2) + 1] as u64).unwrap();
+                for i in 0..temp_word.to_be_bytes().len() {
+                    print!("{:08b} ", temp_word.to_be_bytes()[i]);
+                }
+                print!("\n");
+                pckd_words.push(temp_word);
             }
         }
         else {
             for i in 0..(words.len()/2)+1 {
                 let mut temp_word: u64 = 0;
                 if i != words.len()/2 {
-                    temp_word = newu(temp_word, 32, 31, words[i * 2] as u64).unwrap();
-                    temp_word = newu(temp_word, 32, 63, words[(i * 2) + 1] as u64).unwrap();
+                    temp_word = newu(temp_word, 32, 0, words[i * 2] as u64).unwrap();
+                    temp_word = newu(temp_word, 32, 31, words[(i * 2) + 1] as u64).unwrap();
+                    pckd_words.push(temp_word);
                 }
                 else {
-                    temp_word = newu(temp_word, 32, 31, words[i * 2] as u64).unwrap();
+                    temp_word = newu(temp_word, 32, 0, words[i * 2] as u64).unwrap();
+                    pckd_words.push(temp_word);
                 }
             }
         }
@@ -228,11 +240,19 @@ impl IoDevice for MchState {
 }
 #[cfg(test)]
 mod tests {
+
+    use crate::mch_state::Segment;
+    use crate::mch_state::SegOperations;
+
     #[test]
     fn segment_test() {
         let words: Vec<u32> = vec![0, 1, 2, 3];
-        let segment = Segment::new(words);
-        println!("Hello, world!");
-        assert!(1==2);
+        let mut segment = Segment::new(words);
+        println!("{0} {1} {2} {3}", segment.get_word(0 as u64), segment.get_word(1 as u64), segment.get_word(2 as u64), segment.get_word(3 as u64));
+        assert!(segment.get_word(0 as u64)==0);
+        println!("{0} {1} {2} {3}", segment.get_word(0 as u64), segment.get_word(1 as u64), segment.get_word(2 as u64), segment.get_word(3 as u64));
+        segment.set_word(0 as u64, 1 as u32);
+        println!("{0} {1} {2} {3}", segment.get_word(0 as u64), segment.get_word(1 as u64), segment.get_word(2 as u64), segment.get_word(3 as u64));
+        assert!(segment.get_word(0 as u64)==1);
     }
 }
