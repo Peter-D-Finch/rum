@@ -5,7 +5,7 @@ use std::io::stdin;
 use std::io::Read;
 use std::io::Write;
 
-struct MchState {
+pub struct MchState {
 	regs: [u32; 8],
 	prog_cntr: u32,
 	addr_space: HashMap<u32, Vec<u64>>
@@ -13,7 +13,7 @@ struct MchState {
 
 pub trait UmFunctions {
     fn exec_cycle(&mut self);
-    fn new(init_seg: Vec<u32>);
+    fn new(init_seg: Vec<u64>);
 }
 
 pub trait UmOperations {
@@ -36,17 +36,12 @@ pub trait IoDevice {
     fn output(&mut self, regs: (u32, u32, u32));
 }
 
- // 0 0 0 0 _ _ _ _ _ _ _  _  _  _  _  _  _  _  _  _  _  _  _  1  1  1  2  2  2  3  3  3 
- // 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
-
- // 0  0  0  0  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  _  1  1  1  2  2  2  3  3  3 
- // 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63
-
 impl UmFunctions for MchState {
     fn exec_cycle(&mut self) {
+        //println!("test");
         let inst: u64 = (self.addr_space.get(&(0 as u32)).unwrap()[self.prog_cntr as usize]);
-        let mut opcode = getu(inst, 4, 0);
-        let mut regs = (getu(inst, 3, 22) as u32, getu(inst, 3, 25) as u32, getu(inst, 3, 28) as u32);
+        let mut opcode = getu(inst, 4, 28);
+        let mut regs = (getu(inst, 3, 6) as u32, getu(inst, 3, 3) as u32, getu(inst, 3, 0) as u32);
         match opcode {
             0 => self.cond_move(regs),
             1 => self.seg_load(regs),
@@ -61,12 +56,41 @@ impl UmFunctions for MchState {
             10 => self.output(regs),
             11 => self.input(regs),
             12 => self.load_prog(regs),
-            13 => self.load_val(getu(inst, 3, 6) as u32, getu(inst, 25, 31) as u32),
+            13 => self.load_val(getu(inst, 3, 25) as u32, getu(inst, 25, 0) as u32),
             _ => println!("default")
         }
+        /*match opcode {
+            0 => println!("cond move: {0} {1} {2}", regs.0, regs.1, regs.2),
+            1 => println!("seg load: {0} {1} {2}", regs.0, regs.1, regs.2),
+            2 => println!("seg store: {0} {1} {2}", regs.0, regs.1, regs.2),
+            3 => println!("add: {0} {1} {2}", regs.0, regs.1, regs.2),
+            4 => println!("multiply: {0} {1} {2}", regs.0, regs.1, regs.2),
+            5 => println!("divide: {0} {1} {2}", regs.0, regs.1, regs.2),
+            6 => println!("nand: {0} {1} {2}", regs.0, regs.1, regs.2),
+            7 => println!("halt: {0} {1} {2}", regs.0, regs.1, regs.2),
+            8 => println!("map seg: {0} {1} {2}", regs.0, regs.1, regs.2),
+            9 => println!("unmap seg: {0} {1} {2}", regs.0, regs.1, regs.2),
+            10 => println!("output: {0} {1} {2}", regs.0, regs.1, regs.2),
+            11 => println!("input: {0} {1} {2}", regs.0, regs.1, regs.2),
+            12 => println!("load prog: {0} {1} {2}", regs.0, regs.1, regs.2),
+            13 => println!("load val: {0} {1} {2}", regs.0, regs.1, regs.2),
+            _ => println!("default")
+        }*/
+        self.prog_cntr = self.prog_cntr + 1;
+        if self.prog_cntr as usize == (self.addr_space.get(&(0 as u32)).unwrap().len() - 1) {
+            self.halt();
+        }
+        else {
+            self.exec_cycle();
+        }
     }
-    fn new(init_seg: Vec<u32>) {
-        println!("TODO");
+    fn new(init_seg: Vec<u64>) {
+        let mut r: [u32; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
+        let mut pc: u32 = 0;
+        let mut mem: HashMap<u32, Vec<u64>> = HashMap::new();
+        mem.insert(0 as u32, init_seg);
+        let mut machine: MchState = MchState { regs: r, prog_cntr: pc, addr_space: mem };
+        machine.exec_cycle();
     }
 }
 
@@ -126,12 +150,9 @@ impl IoDevice for MchState {
         }
     }
     fn output(&mut self, regs: (u32, u32, u32)){
-        println!("{}", self.regs[regs.2 as usize]);
+        print!("{}", (self.regs[regs.2 as usize] as u8) as char);
     }
 }
-
-
-
 
 #[cfg(test)]
 mod tests {
