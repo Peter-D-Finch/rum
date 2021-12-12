@@ -44,9 +44,9 @@ pub trait IoDevice {
 
 impl UmFunctions for MchState {
     fn exec_cycle(&mut self) {
-        let pckd_inst = self.addr_space.get(&(0 as u32)).unwrap()[self.prog_cntr as usize];
-        let mut opcode = getu(pckd_inst, 4, 4);
-        let mut regs = (getu(pckd_inst, 3, 25) as u32, getu(pckd_inst, 3, 28) as u32, getu(pckd_inst, 3, 31) as u32);
+        let inst: u64 = (self.addr_space.get(&(0 as u32)).unwrap()[self.prog_cntr as usize]);
+        let mut opcode = getu(inst, 4, 0);
+        let mut regs = (getu(inst, 3, 22) as u32, getu(inst, 3, 25) as u32, getu(inst, 3, 28) as u32);
         match opcode {
             0 => self.cond_move(regs),
             1 => self.seg_load(regs),
@@ -61,7 +61,7 @@ impl UmFunctions for MchState {
             10 => self.output(regs),
             11 => self.input(regs),
             12 => self.load_prog(regs),
-            13 => self.load_val(getu(pckd_inst, 3, 6) as u32, getu(pckd_inst, 25, 31) as u32),
+            13 => self.load_val(getu(inst, 3, 6) as u32, getu(inst, 25, 31) as u32),
             _ => println!("default")
         }
     }
@@ -77,10 +77,12 @@ impl UmOperations for MchState {
         }
     }
     fn seg_load(&mut self, regs: (u32, u32, u32)){
-        
+        self.regs[regs.0 as usize] = self.addr_space.get(&self.regs[regs.1 as usize]).unwrap()[regs.2 as usize] as u32;
     }
     fn seg_store(&mut self, regs: (u32, u32, u32)){
-        
+        let mut temp_vec: Vec<u64> = self.addr_space.get(&self.regs[regs.0 as usize]).unwrap().to_vec();
+        temp_vec[regs.1 as usize] = self.regs[regs.2 as usize] as u64;
+        self.addr_space.insert(self.regs[regs.0 as usize], temp_vec);
     }
     fn add(&mut self, regs: (u32, u32, u32)){
         self.regs[regs.0 as usize] = (self.regs[regs.1 as usize] + self.regs[regs.2 as usize]) % 4294967295;
@@ -98,13 +100,7 @@ impl UmOperations for MchState {
         std::process::exit(0x0000);
     }
     fn map_seg(&mut self, regs: (u32, u32, u32)){
-        let mut segment: Vec<u64>;
-        match self.regs[(regs.2) as usize] % 2 {
-            0 => segment = vec![0 as u64; self.regs[(regs.2) as usize] as usize / 2],
-            1 => segment = vec![0 as u64; (self.regs[(regs.2) as usize] as usize / 2) + 1],
-            _ => println!("Something is VERY wrong.")
-        }
-        let mut segment: Vec<u64> = vec![0 as u64; self.regs[(regs.2/2) as usize] as usize];
+        let mut segment: Vec<u64> = vec![0 as u64; self.regs[(regs.2) as usize] as usize];
         let unused_key = (0..u32::MAX).into_iter().find(|key| !self.addr_space.contains_key(key)).unwrap();
         self.addr_space.insert(unused_key, segment);
     }
@@ -140,16 +136,40 @@ impl IoDevice for MchState {
 #[cfg(test)]
 mod tests {
 
+    use bitpack::bitpack::getu;
+    use bitpack::bitpack::newu;
+
     #[test]
     fn segment_test() {
-        let temp_word: u32 = 10;
+        let temp_word: u32 = 1287363297;
         for i in 0..temp_word.to_be_bytes().len() {
             print!("{:08b} ", temp_word.to_be_bytes()[i]);
         }
-        let temp_word2: u64 = temp_word as u32;
+        print!("\n");
+        let mut temp_word2: u64 = temp_word as u64;
+        temp_word2 = newu(temp_word2, 4, 0, 15).unwrap();
         for i in 0..temp_word2.to_be_bytes().len() {
             print!("{:08b} ", temp_word2.to_be_bytes()[i]);
         }
-        assert!(1 == 1);
+        print!("\n\n");
+        let mut opcode = getu(temp_word2, 4, 0);
+        let mut regs = (getu(temp_word2, 3, 22) as u32, getu(temp_word2, 3, 25) as u32, getu(temp_word2, 3, 28) as u32);
+        for i in 0..opcode.to_be_bytes().len() {
+            print!("{:08b} ", opcode.to_be_bytes()[i]);
+        }
+        print!("\n");
+        for i in 0..(regs.0).to_be_bytes().len() {
+            print!("{:08b} ", (regs.0).to_be_bytes()[i]);
+        }
+        print!("\n");
+        for i in 0..(regs.1).to_be_bytes().len() {
+            print!("{:08b} ", (regs.1).to_be_bytes()[i]);
+        }
+        print!("\n");
+        for i in 0..(regs.2 as u32).to_be_bytes().len() {
+            print!("{:08b} ", (regs.2).to_be_bytes()[i]);
+        }
+        print!("\n");
+        assert!(1 == 2);
     }
 }
