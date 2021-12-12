@@ -1,4 +1,5 @@
 #!/bin/bash
+git remote set-url origin https://Peter-D-Finch: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@github.com/Peter-D-Finch/rum.git
 git add -A
 git commit -m "Automated commit message"
 git push
