@@ -226,3 +226,13 @@ impl IoDevice for MchState {
         println!("{}", self.regs[regs.2 as usize]);
     }
 }
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn segment_test() {
+        let words: Vec<u32> = vec![0, 1, 2, 3];
+        let segment = Segment::new(words);
+        println!("Hello, world!");
+        assert!(1==2);
+    }
+}
