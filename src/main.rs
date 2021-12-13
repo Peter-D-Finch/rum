@@ -1,6 +1,4 @@
-use std::fs::File;
 use std::env;
-use std::io;
 use bitpack::bitpack::newu;
 
 mod mch_state;
@@ -11,11 +9,11 @@ fn main() {
   let argnum = args.len();
   assert!(argnum == 1);
   //let filename = args.iter().nth(2).unwrap();
-  let num_bytes = std::fs::metadata("/csc/411/um/hello.um").unwrap().len();
+  let num_bytes = std::fs::metadata("/csc/411/um/cat.um").unwrap().len();
   assert!(num_bytes % 4 == 0);
   let num_words = num_bytes / 4;
   
-  let bytes = std::fs::read("/csc/411/um/hello.um").unwrap();
+  let bytes = std::fs::read("/csc/411/um/cat.um").unwrap();
   /*for i in 0..bytes.len() {
     for j in 0..(bytes[i]).to_be_bytes().len() {
       print!("{:08b} ", (bytes[i]).to_be_bytes()[j]);
