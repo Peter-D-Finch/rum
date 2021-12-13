@@ -3,12 +3,5 @@
 version = 3
 
 [[package]]
-name = "bitpack"
-version = "0.1.0"
-
-[[package]]
 name = "rum"
 version = "0.1.0"
-dependencies = [
- "bitpack",
-]
