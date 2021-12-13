@@ -4,11 +4,12 @@ use std::io::Read;
 
 use crate::bitpack::newu;
 use crate::bitpack::getu;
+use crate::io_device::IoDevice;
 
 pub struct MchState {
-	regs: [u32; 8],
-	prog_cntr: u32,
-	addr_space: HashMap<u32, Vec<u32>>
+	pub regs: [u32; 8],
+	pub prog_cntr: u32,
+	pub addr_space: HashMap<u32, Vec<u32>>
 }
 
 pub trait UmFunctions {
@@ -31,11 +32,6 @@ pub trait UmOperations {
     fn load_val(&mut self, reg: u32, val: u32);
 }
 
-pub trait IoDevice {
-    fn input(&mut self, regs: (u32, u32, u32));
-    fn output(&mut self, regs: (u32, u32, u32));
-}
-
 impl UmFunctions for MchState {
     fn exec_cycle(&mut self) {
         while true {
@@ -45,6 +41,25 @@ impl UmFunctions for MchState {
             /*if regs.0 == 6 || regs.1 == 6 || regs.2 == 6 {
                 println!("{} opcode: {}", self.regs[6], opcode);
             }*/
+            println!("{0} {1} {2} {3} {4} {5} {6} {7}", self.regs[0], self.regs[1], self.regs[2], self.regs[3], self.regs[4], self.regs[5], self.regs[6], self.regs[7]);
+            match opcode {
+                0 => println!("cond move: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                1 => println!("seg load: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                2 => println!("seg store: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                3 => println!("add: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                4 => println!("multiply: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                5 => println!("divide: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                6 => println!("nand: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                7 => println!("halt: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                8 => println!("map seg: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                9 => println!("unmap seg: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                10 => println!("output: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                11 => println!("input: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                12 => println!("load prog: {0} {1} | {2} {3} | {4} {5}", regs.0, self.regs[regs.0 as usize], regs.1, self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]),
+                13 => println!("load val: {0} {1}", getu(inst as u64, 3, 25) as u32, getu(inst as u64, 25, 0) as u32),
+                _ => println!("default")
+            }
+            print!("\n\n");
             match opcode {
                 0 => self.cond_move(regs),
                 1 => self.seg_load(regs),
@@ -62,23 +77,6 @@ impl UmFunctions for MchState {
                 13 => self.load_val(getu(inst as u64, 3, 25) as u32, getu(inst as u64, 25, 0) as u32),
                 _ => println!("default")
             }
-            /*match opcode {
-                0 => println!("cond move: {0} {1} {2}", regs.0, regs.1, regs.2),
-                1 => println!("seg load: {0} {1} {2}", regs.0, regs.1, regs.2),
-                2 => println!("seg store: {0} {1} {2}", regs.0, regs.1, regs.2),
-                3 => println!("add: {0} {1} {2}", regs.0, regs.1, regs.2),
-                4 => println!("multiply: {0} {1} {2}", regs.0, regs.1, regs.2),
-                5 => println!("divide: {0} {1} {2}", regs.0, regs.1, regs.2),
-                6 => println!("nand: {0} {1} {2}", regs.0, regs.1, regs.2),
-                7 => println!("halt: {0} {1} {2}", regs.0, regs.1, regs.2),
-                8 => println!("map seg: {0} {1} {2}", regs.0, regs.1, regs.2),
-                9 => println!("unmap seg: {0} {1} {2}", regs.0, regs.1, regs.2),
-                10 => println!("output: {0} {1} {2}", regs.0, regs.1, regs.2),
-                11 => println!("input: {0} {1} {2}", regs.0, regs.1, regs.2),
-                12 => println!("load prog: {0} {1} {2}", regs.0, regs.1, regs.2),
-                13 => println!("load val: {0} {1}", getu(inst as u64, 3, 25) as u32, getu(inst as u64, 25, 0) as u32),
-                _ => println!("default")
-            }*/
             if opcode != 12 {
                 self.prog_cntr = self.prog_cntr + 1;
             }
@@ -145,20 +143,6 @@ impl UmOperations for MchState {
     }
     fn load_val(&mut self, reg: u32, val: u32){
         self.regs[reg as usize] = val;
-    }
-}
-
-impl IoDevice for MchState {
-    fn input(&mut self, regs: (u32, u32, u32)){
-        match stdin().bytes().next() {
-            Some(value) => {
-                self.regs[regs.2 as usize] = value.unwrap() as u32;
-            }
-            None => self.regs[regs.2 as usize] = u32::MAX,
-        }
-    }
-    fn output(&mut self, regs: (u32, u32, u32)){
-        print!("{}", (self.regs[regs.2 as usize] as u8) as char);
     }
 }
 
@@ -319,9 +303,7 @@ mod tests {
         let x = machine.addr_space.get(&(0 as u32)).unwrap();
         for i in 0..test_seg3.len() {
             assert!(x[i] == test_seg3[i]);
-            //println!("{0} {1}", x[i], test_seg3[i]);
         }
-        //println!("{}", machine.prog_cntr);
         assert!(machine.prog_cntr == 4 as u32);
     }
     #[test]

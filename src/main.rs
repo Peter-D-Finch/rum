@@ -1,16 +1,18 @@
 use std::env;
 
 mod bitpack;
-use rum::bitpack::newu;
-
 mod mch_state;
+mod io_device;
+
+use rum::bitpack::newu;
+use crate::io_device::IoDevice;
 use crate::mch_state::UmFunctions;
 
 fn main() {
   let args: Vec<String> = env::args().collect();
   let argnum = args.len();
-  assert!(argnum == 1);
-  let filename = args.iter().nth(2).unwrap();
+  //assert!(argnum == 1);
+  let filename = args.iter().nth(1).unwrap();
   let num_bytes = std::fs::metadata(filename).unwrap().len();
   assert!(num_bytes % 4 == 0);
   let num_words = num_bytes / 4;
