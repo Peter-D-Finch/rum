@@ -36,9 +36,9 @@ impl UmFunctions for MchState {
             let regs = (getu(inst as u64, 3, 6) as u32, getu(inst as u64, 3, 3) as u32, getu(inst as u64, 3, 0) as u32);
             // ----------------------------------- DEBUGGING ------------------------------------
             /*
-            if opcode == 10 {
+            /*if opcode == 10 {
                 println!("Should be outputting");
-            }
+            }*/
             
             let opcode_string: String;
             match opcode {
@@ -85,7 +85,7 @@ impl UmFunctions for MchState {
                 self.halt();
             }
             num_ops = num_ops + 1;
-            print!("\n");
+            //print!("\n");
         }
     }
     fn new(init_seg: Vec<u32>) {
@@ -112,26 +112,29 @@ impl UmOperations for MchState {
         let mut temp_vec: Vec<u32> = self.addr_space.get(&self.regs[regs.0 as usize]).unwrap().to_vec();
         temp_vec[self.regs[regs.1 as usize] as usize] = self.regs[regs.2 as usize];
         self.addr_space.insert(self.regs[regs.0 as usize], temp_vec);
+        //print!("m[{0}][{1}] = reg {2} = {3}", self.regs[regs.0 as usize], self.regs[regs.1 as usize], regs.2, self.regs[regs.2 as usize]);
     }
     fn add(&mut self, regs: (u32, u32, u32)){
-        self.regs[regs.0 as usize] = (((self.regs[regs.1 as usize] as u64 + self.regs[regs.2 as usize] as u64) << 32) >> 32) as u32;
+        self.regs[regs.0 as usize] = ((self.regs[regs.1 as usize] as i64 + self.regs[regs.2 as usize] as i64) % 4294967296) as u32;
+        //print!("reg {0} = reg {1} + reg {2} = {3}", regs.0, regs.1 as usize, regs.2 as usize, self.regs[regs.0 as usize]);
     }
     fn multiply(&mut self, regs: (u32, u32, u32)){
         self.regs[regs.0 as usize] = (((self.regs[regs.1 as usize] as u64 * self.regs[regs.2 as usize] as u64) << 32) >> 32) as u32;
     }
     fn divide(&mut self, regs: (u32, u32, u32)){
-        self.regs[regs.0 as usize] = self.regs[regs.1 as usize] / self.regs[regs.2 as usize];
+        let result = (self.regs[regs.1 as usize] as i64) / (self.regs[regs.2 as usize] as i64);
+        self.regs[regs.0 as usize] = result as u32;
     }
     fn nand(&mut self, regs: (u32, u32, u32)){
         self.regs[regs.0 as usize] = !(self.regs[regs.1 as usize] & self.regs[regs.2 as usize]);
         //print!("reg {0} = !({1} & {2}) = {3}", regs.0, self.regs[regs.1 as usize], self.regs[regs.2 as usize], self.regs[regs.0 as usize]);
     }
     fn halt(&mut self){
-        println!("\n\nSYSTEM HALTING...");
+        //println!("\n\nSYSTEM HALTING...");
         std::process::exit(0x0000);
     }
     fn map_seg(&mut self, regs: (u32, u32, u32)){
-        let segment: Vec<u32> = vec![0 as u32; self.regs[(regs.2) as usize] as usize];
+        let segment: Vec<u32> = vec![0 as u32; self.regs[regs.2 as usize] as usize];
         let mut random: LinkedList<Vec<i32>> = LinkedList::new();
         random.push_back(vec![2, 3]);
         let mut unused_key: u32 = ((((((random.back().unwrap() as *const Vec<i32>) as u64) << 48) >> 48) as u32) * (((((random.back().unwrap() as *const Vec<i32>) as u64) << 48) >> 48) as u32)) % u32::MAX;
@@ -149,7 +152,7 @@ impl UmOperations for MchState {
         self.addr_space.remove(&self.regs[regs.2 as usize]);
     }
     fn load_prog(&mut self, regs: (u32, u32, u32)){
-        //print!("{0}, {1}, {2}", self.regs[regs.0 as usize], self.regs[regs.1 as usize], self.regs[regs.2 as usize]);
+        //print!("goto m[{0}] line {1}", self.regs[regs.1 as usize], self.regs[regs.2 as usize]);
         if self.regs[regs.1 as usize] != 0 {
             let new_seg = self.addr_space.get(&self.regs[regs.1 as usize]).unwrap().to_vec();
             self.addr_space.remove(&(0 as u32));
@@ -165,7 +168,6 @@ impl UmOperations for MchState {
 
 #[cfg(test)]
 mod tests {
-
     use crate::bitpack::getu;
     use crate::bitpack::newu;
     use crate::mch_state::MchState;
@@ -192,31 +194,29 @@ mod tests {
         let r: [u32; 8] = [5, 1, 3, 0, 0, 0, 0, 0];
         let pc: u32 = 0;
         let mut mem: HashMap<u32, Vec<u32>> = HashMap::new();
-
         let test_seg: Vec<u32> = vec![0, 1, 2, 16, 4, 5, 6, 7, 8, 9];
         mem.insert(1 as u32, test_seg);
-
         let mut machine: MchState = MchState { regs: r, prog_cntr: pc, addr_space: mem };
 
         let mut regs = (0 as u32, 1 as u32, 2 as u32);
         machine.seg_load(regs);
-        println!("{}", machine.regs[regs.0 as usize]);
         assert!(machine.regs[regs.0 as usize] == 16 as u32);
     }
     #[test]
     fn seg_store_test() {
-        let r: [u32; 8] = [1, 1, 6, 0, 0, 0, 0, 0];
+        let r: [u32; 8] = [5, 0, 10, 0, 0, 0, 0, 0];
         let pc: u32 = 0;
         let mut mem: HashMap<u32, Vec<u32>> = HashMap::new();
-
-        let test_seg: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-        mem.insert(1 as u32, test_seg);
-
+        let test_seg: Vec<u32> = vec![0];
+        mem.insert(0 as u32, test_seg);
         let mut machine: MchState = MchState { regs: r, prog_cntr: pc, addr_space: mem };
 
         let mut regs = (0 as u32, 1 as u32, 2 as u32);
+        machine.map_seg(regs);
+
+        regs = (1 as u32, 3 as u32, 2 as u32);
         machine.seg_store(regs);
-        assert!(machine.addr_space.get(&(1 as u32)).unwrap()[1] == 6 as u32);
+        assert!(machine.addr_space.get(&machine.regs[1]).unwrap()[machine.regs[3] as usize] == 10 as u32);
     }
     #[test]
     fn add_test() {
@@ -230,8 +230,7 @@ mod tests {
         assert!(machine.regs[0] == 2 as u32);
         let mut regs = (0 as u32, 2 as u32, 3 as u32);
         machine.add(regs);
-        println!("{}", machine.regs[0]);
-        assert!(machine.regs[0] == 0 as u32);
+        assert!(machine.regs[0] == ((machine.regs[3] as u64 + machine.regs[2] as u64) % 4294967296) as u32);
     }
     #[test]
     fn multiply_test() {
@@ -245,8 +244,7 @@ mod tests {
         assert!(machine.regs[0] == 4 as u32);
         let mut regs = (0 as u32, 2 as u32, 3 as u32);
         machine.multiply(regs);
-        println!("{}", machine.regs[0]);
-        assert!(machine.regs[0] == 4294967294 as u32);
+        assert!(machine.regs[0] == ((machine.regs[2] as u64 * machine.regs[3] as u64) % 4294967296) as u32);
     }
     #[test]
     fn division_test() {
@@ -275,29 +273,33 @@ mod tests {
         let r: [u32; 8] = [5, 0, 10, 0, 0, 0, 0, 0];
         let pc: u32 = 0;
         let mut mem: HashMap<u32, Vec<u32>> = HashMap::new();
-        let test_seg: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let test_seg: Vec<u32> = vec![0];
         mem.insert(0 as u32, test_seg);
         let mut machine: MchState = MchState { regs: r, prog_cntr: pc, addr_space: mem };
 
         let mut regs = (0 as u32, 1 as u32, 2 as u32);
         machine.map_seg(regs);
-        //assert!(machine.regs[1] == 1 as u32);
-        assert!(machine.addr_space.get(&(machine.regs[1] as u32)).unwrap()[0] == 0);
+        assert!(machine.addr_space.get(&(machine.regs[regs.1 as usize] as u32)).unwrap()[0] == 0);
+        assert!(machine.addr_space.get(&(machine.regs[regs.1 as usize] as u32)).unwrap()[9] == 0);
+        assert!(machine.addr_space.get(&(machine.regs[regs.1 as usize] as u32)).unwrap().len() as u32 == machine.regs[regs.2 as usize]);
     }
     #[test]
     fn unmap_seg_test() {
-        let r: [u32; 8] = [5, 0, 10, 1, 0, 0, 0, 0];
+        let r: [u32; 8] = [5, 0, 10, 0, 0, 0, 0, 0];
         let pc: u32 = 0;
         let mut mem: HashMap<u32, Vec<u32>> = HashMap::new();
-        let test_seg: Vec<u32> = vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let test_seg: Vec<u32> = vec![0];
         mem.insert(0 as u32, test_seg);
         let mut machine: MchState = MchState { regs: r, prog_cntr: pc, addr_space: mem };
 
         let mut regs = (0 as u32, 1 as u32, 2 as u32);
         machine.map_seg(regs);
-        regs = (0 as u32, 1 as u32, 3 as u32);
+        assert!(machine.addr_space.get(&(machine.regs[regs.1 as usize] as u32)).unwrap()[0] == 0);
+        assert!(machine.addr_space.get(&(machine.regs[regs.1 as usize] as u32)).unwrap()[9] == 0);
+        assert!(machine.addr_space.get(&(machine.regs[regs.1 as usize] as u32)).unwrap().len() as u32 == machine.regs[regs.2 as usize]);
+        let mut regs = (0 as u32, 1 as u32, 1 as u32);
         machine.unmap_seg(regs);
-        let x = machine.addr_space.get(&(1 as u32));
+        let x = machine.addr_space.get(&(machine.regs[regs.1 as usize] as u32));
         match x {
             Some(_) => assert!(1 == 2),
             None => assert!(1 == 1)
