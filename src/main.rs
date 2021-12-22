@@ -36,6 +36,6 @@ fn main() {
     print!("\n");*/
   }
 
-  println!("\n{}", num_words);
-  //mch_state::MchState::new(words);
+  //println!("\n{}", num_words);
+  mch_state::MchState::new(words);
 }
