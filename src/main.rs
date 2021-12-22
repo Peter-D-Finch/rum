@@ -4,14 +4,11 @@ mod bitpack;
 mod mch_state;
 mod io_device;
 
-use rum::bitpack::newu;
-use crate::io_device::IoDevice;
+use crate::bitpack::newu;
 use crate::mch_state::UmFunctions;
 
 fn main() {
   let args: Vec<String> = env::args().collect();
-  let argnum = args.len();
-  //assert!(argnum == 1);
   let filename = args.iter().nth(1).unwrap();
   let num_bytes = std::fs::metadata(filename).unwrap().len();
   assert!(num_bytes % 4 == 0);
@@ -26,6 +23,7 @@ fn main() {
   }*/
   let mut words: Vec<u32> = Vec::new();
   for i in 0..num_words {
+    //print!("[{}]", i);
     let mut temp_word: u32 = 0;
     temp_word = newu(temp_word as u64, 8, 0, bytes[(4*i+3) as usize] as u64).unwrap() as u32;
     temp_word = newu(temp_word as u64, 8, 8, bytes[((4*i)+2) as usize] as u64).unwrap() as u32;
@@ -33,11 +31,11 @@ fn main() {
     temp_word = newu(temp_word as u64, 8, 24, bytes[((4*i)) as usize] as u64).unwrap() as u32;
     words.push(temp_word);
     /*for i in 0..(temp_word).to_be_bytes().len() {
-      print!("{:08b} ", (temp_word).to_be_bytes()[i]);
+      print!("{:08b} ",(temp_word).to_be_bytes()[i]);
     }
     print!("\n");*/
   }
-  //print!("\n");
-  //println!("{}", num_words);
-  mch_state::MchState::new(words);
+
+  println!("\n{}", num_words);
+  //mch_state::MchState::new(words);
 }
