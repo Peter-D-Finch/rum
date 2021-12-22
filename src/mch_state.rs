@@ -30,12 +30,12 @@ pub trait UmOperations {
 impl UmFunctions for MchState {
     fn exec_cycle(&mut self) {
         let mut num_ops = 0;
-        
         loop {
             let inst: u32 = self.addr_space.get(&(0 as u32)).unwrap()[self.prog_cntr as usize];
             let opcode = getu(inst as u64, 4, 28) as u32;
             let regs = (getu(inst as u64, 3, 6) as u32, getu(inst as u64, 3, 3) as u32, getu(inst as u64, 3, 0) as u32);
             // ----------------------------------- DEBUGGING ------------------------------------
+            /*
             if opcode == 10 {
                 println!("Should be outputting");
             }
@@ -59,7 +59,7 @@ impl UmFunctions for MchState {
                 _ => opcode_string = "FAIL".to_string()
             }
             print!("[OP #{0}][OPCODE {1}][OPREG {2} {3} {4}][PROG CNTR #{5}]: ", num_ops, opcode_string, regs.0, regs.1, regs.2, self.prog_cntr);
-            
+            */
             // ----------------------------------------------------------------------------------
             match opcode {
                 0 => self.cond_move(regs),
